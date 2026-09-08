@@ -53,4 +53,4 @@ Celonis permissions.
 
 ## Support
 
-Contact: r.devletov@celonis.com
+https://support.celonis.com

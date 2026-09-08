@@ -4,8 +4,7 @@
   "version": "1.0.0",
   "description": "Query process data, find bottlenecks, run pipelines, agents, and orchestrations in Celonis from Cursor.",
   "author": {
-    "name": "Celonis",
-    "email": "r.devletov@celonis.com"
+    "name": "Celonis"
   },
   "homepage": "https://github.com/celonis/celonis-cursor-plugin#readme",
   "repository": "https://github.com/celonis/celonis-cursor-plugin",
@@ -28,6 +27,7 @@
     "studio-mcp",
     "integrations"
   ],
+  "minClientVersions": { "cursor": "3.13.0" },
   "mcpServers": "./mcp.json",
   "variables": {
     "type": "object",
