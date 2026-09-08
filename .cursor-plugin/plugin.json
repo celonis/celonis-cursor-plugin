@@ -1,0 +1,45 @@
+{
+  "name": "celonis",
+  "displayName": "Celonis",
+  "version": "1.0.0",
+  "description": "Query process data, find bottlenecks, run pipelines, agents, and orchestrations in Celonis from Cursor.",
+  "author": {
+    "name": "Celonis",
+    "email": "r.devletov@celonis.com"
+  },
+  "homepage": "https://github.com/celonis/celonis-cursor-plugin#readme",
+  "repository": "https://github.com/celonis/celonis-cursor-plugin",
+  "license": "Apache-2.0",
+  "logo": "assets/logo.svg",
+  "keywords": [
+    "celonis",
+    "mcp",
+    "process-mining",
+    "process-intelligence",
+    "studio-mcp",
+    "data-pipelines",
+    "agent-tools"
+  ],
+  "category": "integrations",
+  "tags": [
+    "celonis",
+    "mcp",
+    "process-mining",
+    "studio-mcp",
+    "integrations"
+  ],
+  "mcpServers": "./mcp.json",
+  "variables": {
+    "type": "object",
+    "properties": {
+      "CELONIS_MCP_URL": {
+        "type": "string",
+        "title": "Celonis MCP URL",
+        "description": "Your tenant MCP endpoint, for example https://my-team.eu-1.celonis.cloud/mcp"
+      }
+    },
+    "required": [
+      "CELONIS_MCP_URL"
+    ]
+  }
+}

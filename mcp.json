@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "celonis": {
+      "type": "http",
+      "url": "${CELONIS_MCP_URL}",
+      "auth": {
+        "CLIENT_ID": "cursor_mcp",
+        "scopes": [
+          "studio-mcp",
+          "data-pipelines.data:read",
+          "data-pipelines:manage",
+          "knowledge-models:read",
+          "package-manager",
+          "pig-semantic-layer:read",
+          "pql-assistant:generation",
+          "mcp-asset.tools:execute",
+          "eml-explorer:read"
+        ]
+      }
+    }
+  }
+}

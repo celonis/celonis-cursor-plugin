@@ -1,14 +1,3 @@
-# Environment and secrets
-.env
-.env.*
-!.env.example
-
-# OS and editor
 .DS_Store
-*.swp
-*.swo
-
-# Logs and temp
+Thumbs.db
 *.log
-tmp/
-temp/
