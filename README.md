@@ -1,34 +1,56 @@
-# Cursor plugin template
+# Celonis for Cursor
 
-Build and publish Cursor Marketplace plugins from a single repo.
+Connect Cursor to Celonis through MCP.
 
-Two starter plugins are included:
+## Requirements
 
-- **starter-simple**: rules and skills only
-- **starter-advanced**: rules, skills, agents, commands, hooks, MCP, and scripts
+- A supported Cursor version
+- Access to a Celonis team where the MCP endpoint is enabled
+- Permission to use the relevant Celonis capabilities
 
-## Getting started
+## Install from the Cursor Marketplace
 
-[Use this template](https://github.com/cursor/plugin-template/generate) to create a new repository, then customize:
+Marketplace installation is the recommended method on Windows, macOS, and
+Linux.
 
-1. `.cursor-plugin/marketplace.json`: set marketplace `name`, `owner`, and `metadata`.
-2. `plugins/*/.cursor-plugin/plugin.json`: set `name` (lowercase kebab-case), `displayName`, `author`, `description`, `keywords`, `license`, and `version`.
-3. Replace placeholder rules, skills, agents, commands, hooks, scripts, and logos.
+1. Open the Plugins or Marketplace page in Cursor.
+2. Search for **Celonis**.
+3. Select the Celonis plugin and click **Install**.
+4. Open the plugin configuration.
+5. Continue with [Configure](#configure).
 
-To add more plugins, see `docs/add-a-plugin.md`.
+## Configure
 
-## Single plugin vs multi-plugin
+1. Install the Celonis plugin from the Marketplace.
+2. Open the Celonis plugin configuration.
+3. Enter your complete Celonis MCP URL:
+   `https://<team>.<realm>.celonis.cloud/mcp`
+4. Open Cursor Settings and select Tools & MCP.
+5. Connect the `celonis` server.
+6. Sign in to Celonis and approve the requested permissions.
 
-This template defaults to **multi-plugin** (multiple plugins in one repo).
+No client secret or API key is required.
 
-For a **single plugin**, move your plugin folder contents to the repository root, keep one `.cursor-plugin/plugin.json`, and remove `.cursor-plugin/marketplace.json`.
+## Permissions and data flow
 
-## Submission checklist
+Cursor sends MCP requests to the Celonis tenant URL configured by the user.
+Celonis authenticates the user and applies tenant, product, package, and
+tool-level permissions. Installing the plugin does not grant additional
+Celonis permissions.
 
-- Each plugin has a valid `.cursor-plugin/plugin.json`.
-- Plugin names are unique, lowercase, and kebab-case.
-- `.cursor-plugin/marketplace.json` entries map to real plugin folders.
-- All frontmatter metadata is present in rule, skill, agent, and command files.
-- Logos are committed and referenced with relative paths.
-- `node scripts/validate-template.mjs` passes.
-- Repository link is ready for submission to the Cursor team (Slack or `kniparko@anysphere.com`).
+## Troubleshooting
+
+- OAuth does not start: verify the URL ends in `/mcp` and the endpoint is
+  enabled for the tenant.
+- Invalid client: verify that `cursor_mcp` is enabled in the tenant's realm.
+- Invalid scope: reconnect after confirming the OAuth client allows every
+  scope requested by the production MCP endpoint.
+- Connected but tools are missing: verify Celonis entitlements and user
+  permissions.
+- HTTP 403 before OAuth: the production route, policy, or CSRF configuration
+  is not allowing OAuth bootstrap traffic.
+- Reconnect requested: consent expiry may require renewed authorization.
+
+## Support
+
+Contact: r.devletov@celonis.com

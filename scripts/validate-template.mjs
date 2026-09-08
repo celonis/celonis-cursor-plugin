@@ -11,6 +11,15 @@ const warnings = [];
 const pluginNamePattern = /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/;
 const marketplaceNamePattern = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 
+const celonisRequiredFiles = [
+  ".cursor-plugin/plugin.json",
+  "mcp.json",
+  "README.md",
+  "LICENSE",
+  "CHANGELOG.md",
+  "assets/logo.svg",
+];
+
 function addError(message) {
   errors.push(message);
 }
@@ -38,6 +47,20 @@ async function ensureDirectory(targetPath, context) {
     return true;
   } catch {
     addError(`${context} directory is missing: ${targetPath}`);
+    return false;
+  }
+}
+
+async function ensureFile(targetPath, context) {
+  try {
+    const stat = await fs.stat(targetPath);
+    if (!stat.isFile()) {
+      addError(`${context} exists but is not a file: ${targetPath}`);
+      return false;
+    }
+    return true;
+  } catch {
+    addError(`${context} is missing: ${targetPath}`);
     return false;
   }
 }
@@ -247,11 +270,113 @@ function resolveMarketplaceSource(source, pluginRoot) {
   return `${normalizedRoot}/${normalizedSource}`;
 }
 
-async function main() {
+async function validatePluginDirectory(pluginDir, pluginName, expectedName = null) {
+  const manifestPath = path.join(pluginDir, ".cursor-plugin", "plugin.json");
+  const pluginManifest = await readJsonFile(manifestPath, `${pluginName} plugin manifest`);
+  if (!pluginManifest) {
+    return;
+  }
+
+  if (typeof pluginManifest.name !== "string" || !pluginNamePattern.test(pluginManifest.name)) {
+    addError(
+      `${pluginName}: "name" in plugin.json must be lowercase and use only alphanumerics, hyphens, and periods.`
+    );
+  }
+
+  if (expectedName && pluginManifest.name && pluginManifest.name !== expectedName) {
+    addError(
+      `${pluginName}: marketplace entry name does not match plugin.json name ("${pluginManifest.name}").`
+    );
+  }
+
+  const manifestFields = ["logo", "rules", "skills", "agents", "commands", "hooks", "mcpServers"];
+  for (const field of manifestFields) {
+    const values = extractPathValues(pluginManifest[field]);
+    for (const value of values) {
+      await validateReferencedPath(pluginDir, field, value, pluginName);
+    }
+  }
+
+  await validateComponentFrontmatter(pluginDir, pluginName);
+
+  const hooksPath = path.join(pluginDir, "hooks", "hooks.json");
+  if (!(await pathExists(hooksPath))) {
+    addWarning(`${pluginName}: no hooks/hooks.json file found (only needed when using hooks).`);
+  }
+
+  const mcpPath = path.join(pluginDir, "mcp.json");
+  if (!(await pathExists(mcpPath))) {
+    addWarning(`${pluginName}: no mcp.json file found (only needed when using MCP servers).`);
+  }
+}
+
+async function validateCelonisSinglePlugin(pluginDir, pluginManifest) {
+  for (const relativePath of celonisRequiredFiles) {
+    await ensureFile(path.join(pluginDir, relativePath), relativePath);
+  }
+
+  if (!pluginManifest) {
+    return;
+  }
+
+  const mcpPath = path.join(pluginDir, "mcp.json");
+  const mcp = await readJsonFile(mcpPath, "mcp.json");
+  if (!mcp) {
+    return;
+  }
+
+  if (
+    typeof pluginManifest.mcpServers !== "string" ||
+    !isSafeRelativePath(pluginManifest.mcpServers)
+  ) {
+    addError("mcpServers must be a safe relative path.");
+  }
+
+  const placeholders = [
+    ...JSON.stringify(mcp).matchAll(/\$\{([A-Z][A-Z0-9_]*)\}/g),
+  ].map((match) => match[1]);
+  const declaredVariables = new Set(Object.keys(pluginManifest.variables?.properties ?? {}));
+
+  for (const placeholder of new Set(placeholders)) {
+    if (!declaredVariables.has(placeholder)) {
+      addError(`\${${placeholder}} is not declared in plugin variables.`);
+    }
+  }
+
+  const server = mcp.mcpServers?.celonis;
+  if (!server) {
+    addError("mcp.json must define mcpServers.celonis.");
+    return;
+  }
+
+  if (server.type !== "http") {
+    addError("Celonis MCP type must be http.");
+  }
+  if (server.url !== "${CELONIS_MCP_URL}") {
+    addError("Celonis MCP URL must use the declared plugin variable.");
+  }
+  if (server.auth?.CLIENT_ID !== "cursor_mcp") {
+    addError("Celonis MCP must use the cursor_mcp public client.");
+  }
+  if ("CLIENT_SECRET" in (server.auth ?? {})) {
+    addError("A public plugin must not contain CLIENT_SECRET.");
+  }
+}
+
+async function validateSinglePluginLayout() {
+  const pluginDir = repoRoot;
+  const manifestPath = path.join(pluginDir, ".cursor-plugin", "plugin.json");
+  const pluginManifest = await readJsonFile(manifestPath, "plugin manifest");
+  const pluginName = pluginManifest?.name ?? "plugin";
+
+  await validatePluginDirectory(pluginDir, pluginName);
+  await validateCelonisSinglePlugin(pluginDir, pluginManifest);
+}
+
+async function validateMarketplaceLayout() {
   const marketplacePath = path.join(repoRoot, ".cursor-plugin", "marketplace.json");
   const marketplace = await readJsonFile(marketplacePath, "Marketplace manifest");
   if (!marketplace) {
-    summarizeAndExit();
     return;
   }
 
@@ -267,7 +392,6 @@ async function main() {
 
   if (!Array.isArray(marketplace.plugins) || marketplace.plugins.length === 0) {
     addError('Marketplace "plugins" must be a non-empty array.');
-    summarizeAndExit();
     return;
   }
 
@@ -316,43 +440,16 @@ async function main() {
       continue;
     }
 
-    const manifestPath = path.join(pluginDir, ".cursor-plugin", "plugin.json");
-    const pluginManifest = await readJsonFile(manifestPath, `${entry.name} plugin manifest`);
-    if (!pluginManifest) {
-      continue;
-    }
+    await validatePluginDirectory(pluginDir, entry.name, entry.name);
+  }
+}
 
-    if (typeof pluginManifest.name !== "string" || !pluginNamePattern.test(pluginManifest.name)) {
-      addError(
-        `${entry.name}: "name" in plugin.json must be lowercase and use only alphanumerics, hyphens, and periods.`
-      );
-    }
-
-    if (pluginManifest.name && pluginManifest.name !== entry.name) {
-      addError(
-        `${entry.name}: marketplace entry name does not match plugin.json name ("${pluginManifest.name}").`
-      );
-    }
-
-    const manifestFields = ["logo", "rules", "skills", "agents", "commands", "hooks", "mcpServers"];
-    for (const field of manifestFields) {
-      const values = extractPathValues(pluginManifest[field]);
-      for (const value of values) {
-        await validateReferencedPath(pluginDir, field, value, entry.name);
-      }
-    }
-
-    await validateComponentFrontmatter(pluginDir, entry.name);
-
-    const hooksPath = path.join(pluginDir, "hooks", "hooks.json");
-    if (!(await pathExists(hooksPath))) {
-      addWarning(`${entry.name}: no hooks/hooks.json file found (only needed when using hooks).`);
-    }
-
-    const mcpPath = path.join(pluginDir, "mcp.json");
-    if (!(await pathExists(mcpPath))) {
-      addWarning(`${entry.name}: no mcp.json file found (only needed when using MCP servers).`);
-    }
+async function main() {
+  const marketplacePath = path.join(repoRoot, ".cursor-plugin", "marketplace.json");
+  if (await pathExists(marketplacePath)) {
+    await validateMarketplaceLayout();
+  } else {
+    await validateSinglePluginLayout();
   }
 
   summarizeAndExit();
