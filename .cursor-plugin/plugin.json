@@ -8,7 +8,7 @@
     "email": "r.devletov@celonis.com"
   },
   "homepage": "https://github.com/celonis/celonis-cursor-plugin#readme",
-  "repository": "https://github.com/celonis/celonis-cursor-plugin",
+  "repository": "https://github.com/cursor/plugins",
   "license": "Apache-2.0",
   "logo": "assets/logo.svg",
   "keywords": [
